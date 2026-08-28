@@ -1,0 +1,4 @@
+# The Inquiry-to-Enrollment Agent (./app) is a separate Next.js application
+# deployed on its own (Vercel) — it is not part of this static marketing
+# site's asset bundle and must never be served by it.
+/app
