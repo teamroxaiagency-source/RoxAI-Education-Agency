@@ -1,0 +1,44 @@
+{
+  "name": "roxai-inquiry-to-enrollment",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Inquiry-to-Enrollment Agent pilot module — multi-tenant admissions automation for RoxAI school clients.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "seed:staff": "tsx scripts/seed-staging-staff.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.47.10",
+    "airtable": "^0.12.2",
+    "googleapis": "^144.0.0",
+    "next": "15.5.24",
+    "postmark": "^4.0.5",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.4",
+    "@types/react-dom": "^19.0.2",
+    "@tailwindcss/postcss": "^4.0.0",
+    "autoprefixer": "^10.4.20",
+    "dotenv": "^16.4.7",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "15.5.24",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}
