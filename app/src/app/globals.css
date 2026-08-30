@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+/*
+ * Motion system. Curves, durations, and rules below follow
+ * github.com/emilkowalski/skills (`animate`): ease-out only for
+ * entrances/exits, ease-in-out for on-screen movement, transitions named
+ * to exact properties (never `transition: all`), everything gated behind
+ * prefers-reduced-motion and, for hover, (hover: hover) + (pointer: fine)
+ * so touch devices never get stuck mid-animation on a phantom hover.
+ */
+@theme {
+  --font-sans: var(--brand-font), "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --color-brand-primary: var(--brand-primary, #2563eb);
+  --color-brand-secondary: var(--brand-secondary, #0f172a);
+
+  --color-canvas: #fafaf9;
+  --color-canvas-dark: #0b0d10;
+  --color-surface: #ffffff;
+  --color-surface-dark: #14171a;
+  --color-ink: #18181b;
+  --color-ink-dark: #f4f4f5;
+  --color-muted: #71717a;
+  --color-muted-dark: #a1a1aa;
+  --color-line: #e4e4e7;
+  --color-line-dark: #27292d;
+
+  --ease-out-standard: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-standard: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-canvas);
+}
+
+body {
+  color: var(--color-ink);
+  background: var(--color-canvas);
+  font-family: var(--font-sans);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+  body {
+    color: var(--color-ink-dark);
+    background: var(--color-canvas-dark);
+  }
+}
+
+/* ── Shared motion primitives ──────────────────────────────────────────── */
+
+/* Enter/exit only. 150–250ms is the popover/dropdown range; modals lean
+   toward 300ms, buttons toward 120ms — set per-component, this is the
+   fallback. */
+.transition-enter {
+  transition-property: opacity, transform;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-out-standard);
+}
+
+.transition-color {
+  transition-property: color, background-color, border-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+.transition-press {
+  transition-property: transform, opacity;
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease-out-standard);
+}
+.transition-press:active {
+  transform: scale(0.97);
+}
+
+/* Card/row hover lift — gated to real pointer devices only. */
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift {
+    transition-property: transform, box-shadow;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out-standard);
+  }
+  .hover-lift:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px -4px rgb(0 0 0 / 0.12);
+  }
+}
+
+/* Entrance keyframes for content that mounts (Kanban cards, modals,
+   toasts). Starts at opacity 0 + scale(0.97) per the "never scale(0)"
+   rule, and is symmetric with a matching exit class. */
+@keyframes enter-fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes exit-fade-rise {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+.animate-enter {
+  animation: enter-fade-rise 200ms var(--ease-out-standard) both;
+}
+.animate-exit {
+  animation: exit-fade-rise 150ms var(--ease-out-standard) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transition-enter,
+  .transition-color,
+  .transition-press,
+  .hover-lift {
+    transition-duration: 1ms !important;
+  }
+  .transition-press:active {
+    transform: none;
+  }
+  .animate-enter,
+  .animate-exit {
+    animation-duration: 1ms !important;
+  }
+}
