@@ -8,10 +8,32 @@ import { getEnv } from "@/lib/env";
  * Google OAuth `state` parameter. Never encodes secrets — only ids and an
  * expiry — so a leaked link can only be replayed for what it already
  * grants (viewing/booking one inquiry's open slots) until it expires.
+ *
+ * Rotation: new tokens are always signed with APP_SIGNING_SECRET alone.
+ * Verification checks APP_SIGNING_SECRET first, then
+ * APP_SIGNING_SECRET_PREVIOUS if set — so during a rotation window,
+ * booking links already sent to parents (signed with the old secret)
+ * keep working until they expire naturally, instead of breaking the
+ * instant the secret rotates. See docs/SECRET_ROTATION.md.
  */
-function sign(payload: string): string {
+
+function activeSecrets(): string[] {
   const env = getEnv();
-  return createHmac("sha256", env.APP_SIGNING_SECRET).update(payload).digest("base64url");
+  return [env.APP_SIGNING_SECRET, env.APP_SIGNING_SECRET_PREVIOUS].filter((s): s is string => Boolean(s));
+}
+
+function signWithSecret(payload: string, secret: string): string {
+  return createHmac("sha256", secret).update(payload).digest("base64url");
+}
+
+/** Always signs with the current (first) secret only — never the rotation-grace previous one. */
+function sign(payload: string): string {
+  return signWithSecret(payload, activeSecrets()[0]!);
+}
+
+/** True if `signature` matches `payload` under *any* active secret (current or, during rotation, previous). */
+function verifyAgainstActiveSecrets(payload: string, signature: string): boolean {
+  return activeSecrets().some((secret) => timingSafeCompare(signature, signWithSecret(payload, secret)));
 }
 
 export interface BookingTokenPayload {
@@ -38,9 +60,8 @@ export function verifyBookingToken(token: string): BookingTokenPayload | null {
   const [inquiryId, expiresAtStr, nonce, signature] = parts;
   if (!inquiryId || !expiresAtStr || !nonce || !signature) return null;
   const payload = `${inquiryId}.${expiresAtStr}.${nonce}`;
-  const expected = sign(payload);
 
-  if (!timingSafeCompare(signature, expected)) return null;
+  if (!verifyAgainstActiveSecrets(payload, signature)) return null;
 
   const expiresAt = Number(expiresAtStr);
   if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) return null;
@@ -49,10 +70,22 @@ export function verifyBookingToken(token: string): BookingTokenPayload | null {
   return { inquiryId, expiresAt };
 }
 
-/** Stored on the inquiry row so a token can be invalidated/looked up without keeping the raw token server-side. */
+/** Stored on the inquiry row at creation time so a token can be looked up without keeping the raw token server-side. Always computed with the current secret. */
 export function hashToken(token: string): string {
-  const env = getEnv();
-  return createHmac("sha256", env.APP_SIGNING_SECRET).update(token).digest("hex");
+  return createHmac("sha256", activeSecrets()[0]!).update(token).digest("hex");
+}
+
+/**
+ * Compares a presented token against a stored hash. Unlike hashToken
+ * (used only at creation), this checks every active secret — a token
+ * hashed and stored before a rotation must still verify against its
+ * original (now "previous") secret.
+ */
+export function verifyTokenHash(token: string, storedHash: string): boolean {
+  return activeSecrets().some((secret) => {
+    const candidate = createHmac("sha256", secret).update(token).digest("hex");
+    return timingSafeCompare(candidate, storedHash);
+  });
 }
 
 function timingSafeCompare(a: string, b: string): boolean {
@@ -73,7 +106,7 @@ export function createSignedState(data: Record<string, string>, ttlMs: number = 
 export function verifySignedState<T extends Record<string, string>>(state: string): T | null {
   const [payload, signature] = state.split(".");
   if (!payload || !signature) return null;
-  if (!timingSafeCompare(signature, sign(payload))) return null;
+  if (!verifyAgainstActiveSecrets(payload, signature)) return null;
 
   try {
     const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as T & { expiresAt: number };

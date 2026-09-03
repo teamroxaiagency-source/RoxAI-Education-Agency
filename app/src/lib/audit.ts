@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { logError } from "@/lib/logger";
 import type { AuditActorType, Database } from "@/types/database";
 
 interface RecordAuditEventArgs {
@@ -33,6 +34,6 @@ export async function recordAuditEvent(
     // Auditing must never take down the primary flow (an inbound webhook
     // still has to reply to the parent even if the audit write fails) —
     // log loudly instead of throwing.
-    console.error(`[audit] failed to record "${action}" for school ${schoolId}:`, error.message);
+    logError(error, `Failed to record audit event "${action}"`, { schoolId, inquiryId, action });
   }
 }

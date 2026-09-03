@@ -10,6 +10,11 @@ const ACTION_LABELS: Record<string, string> = {
   "notes.updated": "Notes updated",
   "booking.confirmed": "Tour booked",
   "integration.google_calendar.connected": "Google Calendar connected",
+  "integration.airtable.configured": "Airtable configured",
+  "integration.google_calendar.disconnected": "Google Calendar disconnected",
+  "integration.airtable.disconnected": "Airtable disconnected",
+  "billing.subscribed": "Subscription started",
+  "billing.status_changed": "Billing status changed",
 };
 
 export function AuditTrail({ entries }: { entries: AuditLogEntry[] }) {

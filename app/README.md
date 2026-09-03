@@ -19,6 +19,9 @@ so the two never collide.
 - **Google Calendar API** — per-school OAuth, freebusy-checked booking
 - **Airtable API** — pushes inquiry state into a school's existing
   lead-tracking base
+- **Stripe** — B2B billing (schools subscribe to the platform itself)
+- **Winston + Sentry** — structured logs and real-time error alerting
+- **Upstash Redis** — rate limiting on every public endpoint
 
 ## 1. Supabase project
 
@@ -67,6 +70,11 @@ Copy `.env.example` to `.env.local` and fill in:
 | `ANTHROPIC_API_KEY` | no | Omit to run extraction on the deterministic fallback parser |
 | `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` / `GOOGLE_OAUTH_REDIRECT_URI` | no | Omit to disable calendar booking until a school connects |
 | `AIRTABLE_PERSONAL_ACCESS_TOKEN` | no | Omit to disable Airtable sync |
+| `APP_SIGNING_SECRET_PREVIOUS` | no | Only set while rotating `APP_SIGNING_SECRET` — see `docs/SECRET_ROTATION.md` |
+| `SENTRY_DSN` | no | Omit and errors are still logged, just not alerted on in real time |
+| `LOG_LEVEL` | no | `error`\|`warn`\|`info`\|`http`\|`debug`, defaults to `info` |
+| `UPSTASH_REDIS_REST_URL` / `_TOKEN` | no (yes in production) | Omit and public endpoints are unthrottled — fine for local dev, not for prod |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_ID` | no | Omit to disable billing (the billing page just says "not configured") |
 
 Startup fails loudly (see `src/lib/env.ts`) if a required var is missing
 or malformed — that's intentional, so a bad deploy never silently drops
@@ -110,6 +118,55 @@ In **Integrations**, an admin enters the school's existing lead-tracking
 base ID and table name. Every inquiry create and status change pushes a
 row keyed on a stable `RoxAI Inquiry ID` field, so re-syncs update in
 place.
+
+## 6. Stripe billing (schools pay RoxAI)
+
+This is B2B billing for the platform itself — separate from anything a
+parent ever sees.
+
+1. In the Stripe Dashboard, create a Product + a recurring Price for the
+   subscription; copy its Price ID into `STRIPE_PRICE_ID`.
+2. Copy your (test, until you're ready for live) secret key into
+   `STRIPE_SECRET_KEY`.
+3. Add a webhook endpoint pointed at `https://<your-domain>/api/webhooks/stripe`
+   listening for at least `checkout.session.completed`,
+   `customer.subscription.updated`, and `customer.subscription.deleted`.
+   Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+4. A school's admin visits **Billing** in the dashboard to subscribe
+   (Stripe Checkout) or manage an existing subscription (Stripe's hosted
+   Billing Portal — no custom UI needed for plan changes, payment
+   methods, or invoices).
+
+## 7. Observability
+
+- **Logs**: every server-side error path calls `logError` from
+  `src/lib/logger.ts`, which writes a structured (JSON) Winston log entry
+  — visible in your deploy platform's log viewer (e.g. Vercel's Logs tab)
+  regardless of whether Sentry is configured.
+- **Alerting**: set `SENTRY_DSN` (from a Sentry project's Client Keys
+  settings) and the same `logError` calls also report to Sentry, so a
+  production failure can page/email/Slack you instead of waiting to be
+  noticed in a log.
+- **Health check**: `GET /api/health` — unauthenticated, does a cheap DB
+  read, returns `200` or `503`. Point an uptime monitor at it.
+
+## 8. Rate limiting
+
+Every public write endpoint (Postmark webhook, booking confirm, Google
+OAuth callback, Stripe webhook) is throttled per caller IP via
+`src/lib/rate-limit.ts`. Create a free database at
+[upstash.com](https://upstash.com), copy its REST URL/token into
+`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`. Without it, these
+endpoints are simply unthrottled — fine for local dev, not for
+production.
+
+## 9. Operations docs
+
+- `docs/ROLLBACK.md` — how to roll back a bad deploy or a bad migration.
+- `docs/SECRET_ROTATION.md` — rotation cadence and steps for every secret
+  this app holds.
+- `.github/workflows/ci.yml` — typecheck/lint/build on every PR touching
+  `app/`.
 
 ## Local development
 

@@ -25,6 +25,17 @@ export type IntegrationStatus = "disconnected" | "connected" | "error";
 export type MessageDirection = "inbound" | "outbound";
 export type AuditActorType = "system" | "staff" | "parent";
 export type BookingKind = "tour" | "call";
+export type BillingStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "incomplete"
+  | "incomplete_expired"
+  | "unpaid"
+  | "paused";
+
+export const ACTIVE_BILLING_STATUSES: BillingStatus[] = ["trialing", "active"];
 
 export type School = {
   id: string;
@@ -142,6 +153,17 @@ export type SchoolIntegrationSecret = {
   updated_at: string;
 }
 
+export type SchoolBilling = {
+  id: string;
+  school_id: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  status: BillingStatus;
+  current_period_end: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 type TableDef<Row> = { Row: Row; Insert: Partial<Row>; Update: Partial<Row>; Relationships: [] };
 
 export type Database = {
@@ -155,6 +177,7 @@ export type Database = {
       audit_log: TableDef<AuditLogEntry>;
       school_integrations: TableDef<SchoolIntegration>;
       school_integration_secrets: TableDef<SchoolIntegrationSecret>;
+      school_billing: TableDef<SchoolBilling>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -163,6 +186,7 @@ export type Database = {
     };
     Enums: {
       inquiry_status: InquiryStatus;
+      billing_status: BillingStatus;
     };
     CompositeTypes: Record<string, never>;
   };

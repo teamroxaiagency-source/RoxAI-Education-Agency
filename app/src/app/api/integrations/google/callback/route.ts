@@ -4,12 +4,20 @@ import { verifySignedState } from "@/lib/signing";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { recordAuditEvent } from "@/lib/audit";
 import { getEnv } from "@/lib/env";
+import { logError } from "@/lib/logger";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 /** Public route (no staff session cookie is guaranteed to survive Google's redirect) — trust is established via the signed `state` param instead. */
 export async function GET(request: Request) {
   const env = getEnv();
+
+  const { limited } = await checkRateLimit("google-oauth-callback", getClientIp(request), { requests: 20, windowSeconds: 60 });
+  if (limited) {
+    return NextResponse.json({ error: "rate limit exceeded" }, { status: 429 });
+  }
+
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
@@ -69,7 +77,7 @@ export async function GET(request: Request) {
     settingsUrl.searchParams.set("google_connected", "1");
     return NextResponse.redirect(settingsUrl);
   } catch (error) {
-    console.error("[google oauth callback] failed:", error);
+    logError(error, "Google OAuth callback failed", { schoolId: decoded.schoolId });
     settingsUrl.searchParams.set("google_error", "connection_failed");
     return NextResponse.redirect(settingsUrl);
   }

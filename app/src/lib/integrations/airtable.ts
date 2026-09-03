@@ -2,6 +2,7 @@ import "server-only";
 import Airtable from "airtable";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getEnv, isAirtableConfigured } from "@/lib/env";
+import { logError } from "@/lib/logger";
 import type { AirtableConfig, Database, Inquiry } from "@/types/database";
 
 /**
@@ -61,7 +62,7 @@ export async function syncInquiryToAirtable(serviceClient: SupabaseClient<Databa
       .eq("id", integration.id);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown Airtable sync error";
-    console.error(`[airtable] sync failed for inquiry ${inquiry.id}:`, message);
+    logError(error, "Airtable sync failed", { inquiryId: inquiry.id, schoolId: inquiry.school_id });
     await serviceClient.from("school_integrations").update({ status: "error", last_error: message }).eq("id", integration.id);
   }
 }

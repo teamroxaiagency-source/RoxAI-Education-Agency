@@ -1,6 +1,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { getEnv, isClaudeExtractionConfigured } from "@/lib/env";
+import { logError } from "@/lib/logger";
 
 export interface ExtractedInquiryFields {
   parentName: string | null;
@@ -38,7 +39,7 @@ export async function extractInquiryFields(input: ExtractionInput): Promise<Extr
     try {
       return await extractWithClaude(input);
     } catch (error) {
-      console.error("[extraction] Claude extraction failed, falling back to heuristic parser:", error);
+      logError(error, "Claude extraction failed, falling back to heuristic parser");
       return { ...extractWithHeuristics(input), method: "heuristic" };
     }
   }

@@ -29,12 +29,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
               Pipeline
             </Link>
             {staff.role === "admin" && (
-              <Link
-                href="/settings/integrations"
-                className="transition-color text-[var(--color-muted)] hover:text-[var(--color-ink)]"
-              >
-                Integrations
-              </Link>
+              <>
+                <Link
+                  href="/settings/integrations"
+                  className="transition-color text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+                >
+                  Integrations
+                </Link>
+                <Link
+                  href="/settings/billing"
+                  className="transition-color text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+                >
+                  Billing
+                </Link>
+              </>
             )}
             <span className="text-[var(--color-muted)]">{staff.full_name}</span>
             <SignOutButton />

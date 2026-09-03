@@ -1,11 +1,12 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { verifyBookingToken, hashToken } from "@/lib/signing";
+import { verifyBookingToken, verifyTokenHash } from "@/lib/signing";
 import { computeOpenSlots, isSlotStillOpen, type OpenSlot } from "@/lib/availability";
 import { getAuthorizedCalendarForSchool, createCalendarEvent } from "@/lib/integrations/google-calendar";
 import { syncInquiryToAirtable } from "@/lib/integrations/airtable";
 import { recordAuditEvent } from "@/lib/audit";
 import { sendReplyEmail } from "@/lib/postmark";
+import { logError } from "@/lib/logger";
 import type { Database, Inquiry, School } from "@/types/database";
 
 export type ResolvedBookingLink =
@@ -23,7 +24,7 @@ export async function resolveBookingLink(
   const { data: inquiry } = await serviceClient.from("inquiries").select("*").eq("id", verified.inquiryId).maybeSingle();
   if (!inquiry) return { valid: false, reason: "not_found" };
 
-  if (inquiry.booking_token_hash !== hashToken(token)) {
+  if (!inquiry.booking_token_hash || !verifyTokenHash(token, inquiry.booking_token_hash)) {
     return { valid: false, reason: "invalid_or_expired_token" };
   }
 
@@ -104,7 +105,7 @@ export async function confirmBooking(
     // The DB-level booking is the durable source of truth; a missing
     // calendar event just means staff will need to add it by hand. Never
     // roll back a confirmed booking over a calendar API hiccup.
-    console.error(`[booking] failed to create Google Calendar event for inquiry ${inquiry.id}:`, error);
+    logError(error, "Failed to create Google Calendar event for booking", { inquiryId: inquiry.id, schoolId: school.id });
   }
 
   await recordAuditEvent(serviceClient, {

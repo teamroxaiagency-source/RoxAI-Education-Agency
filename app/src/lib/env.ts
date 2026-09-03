@@ -26,6 +26,22 @@ const serverSchema = z.object({
   GOOGLE_OAUTH_REDIRECT_URI: z.string().url().optional(),
 
   AIRTABLE_PERSONAL_ACCESS_TOKEN: z.string().min(1).optional(),
+
+  // Rotation grace period: verified against but never used to sign new
+  // tokens. Set when rotating APP_SIGNING_SECRET so booking links already
+  // in a parent's inbox keep working until they expire naturally. See
+  // docs/SECRET_ROTATION.md.
+  APP_SIGNING_SECRET_PREVIOUS: z.string().min(32).optional(),
+
+  SENTRY_DSN: z.string().url().optional(),
+  LOG_LEVEL: z.enum(["error", "warn", "info", "http", "debug"]).default("info"),
+
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  STRIPE_PRICE_ID: z.string().min(1).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -65,4 +81,16 @@ export function isClaudeExtractionConfigured(env: ServerEnv = getEnv()): boolean
 
 export function isAirtableConfigured(env: ServerEnv = getEnv()): boolean {
   return Boolean(env.AIRTABLE_PERSONAL_ACCESS_TOKEN);
+}
+
+export function isSentryConfigured(env: ServerEnv = getEnv()): boolean {
+  return Boolean(env.SENTRY_DSN);
+}
+
+export function isRateLimitConfigured(env: ServerEnv = getEnv()): boolean {
+  return Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN);
+}
+
+export function isStripeConfigured(env: ServerEnv = getEnv()): boolean {
+  return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.STRIPE_PRICE_ID);
 }
