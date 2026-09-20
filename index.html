@@ -715,6 +715,7 @@
         </div>
         <button type="submit" class="btn-primary">Send Message</button>
         <p class="contact-note">Prefer to write instead of book a call? Send us a message and we'll reply within one business day.</p>
+        <p id="formError" class="contact-note" style="color:#B91C1C; display:none;"></p>
       </form>
     </div>
     <p class="email-line">Or email us directly at <a href="mailto:operations@roxaieducationagency.com">operations@roxaieducationagency.com</a></p>
@@ -793,10 +794,37 @@
     });
   });
 
-  // Contact form (client-side only — needs a real backend or the Airtable form embed before launch)
+  // Contact form — submits to the /api/contact Pages Function
   document.getElementById('contactForm').addEventListener('submit', function(e){
     e.preventDefault();
-    window.location.href = 'thank-you.html';
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const errorEl = document.getElementById('formError');
+    const originalLabel = submitBtn.textContent;
+    errorEl.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending…';
+
+    fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name.value,
+        school: form.school.value,
+        email: form.email.value,
+        message: form.message.value,
+      }),
+    })
+      .then(function(res){
+        if (!res.ok) throw new Error('Request failed');
+        window.location.href = 'thank-you.html';
+      })
+      .catch(function(){
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalLabel;
+        errorEl.textContent = "Something went wrong sending your message. Please email us directly at operations@roxaieducationagency.com.";
+        errorEl.style.display = 'block';
+      });
   });
 
   // Redirect to thank-you page once a Calendly booking is confirmed
