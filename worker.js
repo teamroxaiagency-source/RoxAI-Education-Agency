@@ -1,11 +1,23 @@
-// Cloudflare Pages Function — handles POST /api/contact from the homepage form.
-// Requires a RESEND_API_KEY secret (set via the Cloudflare dashboard or
-// `wrangler pages secret put RESEND_API_KEY`). Optional CONTACT_TO_EMAIL env
-// var overrides the destination address.
+// Cloudflare Worker entry point. This project deploys as a "Worker with
+// static assets" (not classic Cloudflare Pages), so routes have to be
+// handled here rather than in a functions/ directory — that convention only
+// applies to the separate Pages product and is silently ignored here.
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export async function onRequestPost({ request, env }) {
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    if (url.pathname === '/api/contact' && request.method === 'POST') {
+      return handleContact(request, env);
+    }
+
+    return env.ASSETS.fetch(request);
+  },
+};
+
+async function handleContact(request, env) {
   let data;
   try {
     data = await request.json();
