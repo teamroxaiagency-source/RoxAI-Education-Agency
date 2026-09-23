@@ -33,7 +33,7 @@ export async function onRequestPost({ request, env }) {
     },
     body: JSON.stringify({
       from: 'RoxAI Website <onboarding@resend.dev>',
-      to: env.CONTACT_TO_EMAIL || 'team.roxaiagency@gmail.com',
+      to: env.CONTACT_TO_EMAIL || 'hello@roxaieducationagency.com',
       reply_to: email,
       subject: `New contact form message from ${name} (${school})`,
       text: `Name: ${name}\nSchool: ${school}\nEmail: ${email}\n\nMessage:\n${message || '(no message provided)'}`,
