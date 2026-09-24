@@ -44,7 +44,7 @@ async function handleContact(request, env) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'RoxAI Website <onboarding@resend.dev>',
+      from: 'RoxAI Website <hello@roxaieducationagency.com>',
       to: env.CONTACT_TO_EMAIL || 'hello@roxaieducationagency.com',
       reply_to: email,
       subject: `New contact form message from ${name} (${school})`,
